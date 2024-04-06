@@ -1,6 +1,6 @@
 import mysql.connector
 
-# Connect to MySQL server
+# MySQL server
 conn = mysql.connector.connect(
     host='localhost',
     user='root',
@@ -9,20 +9,22 @@ conn = mysql.connector.connect(
 )
 cursor = conn.cursor()
 
-# Sample student data
 student_data = [
-    ("URK23CS1086", "Richan Abraham J.R", "richanabraham", "72 3D A3 51"),
-    ("URK23CS0000", "Jane Smith", "jane.smith@example.com", "A8 B3 1F 12")
+    ("URK23CS0001", "Bruce Wanye", "brucewayne@karunya.edu.in" ),
+    ("URK23CS0002", "Hermione", "hermione@karunya.edu.in" ),
+    ("URK23CS0004", "Louis", "louis@karunya.edu.in" ),
+    ("URK23CS0004", "Alex Harry", "alexharry@karunya.edu.in" ),
+    ("URK23CS0005", "Chadler", "chadler@karunya.edu.in")
 ]
 
-# Insert student data into the students table
+#insert student data into the students table
 for student in student_data:
     cursor.execute("""
-        INSERT INTO students (student_id, student_name, student_email, uid)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO students (student_id,name, email)
+        VALUES (%s, %s, %s)
     """, student)
 
-# Commit changes and close connection
+#commit changes
 conn.commit()
 cursor.close()
 conn.close()

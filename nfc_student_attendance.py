@@ -1,52 +1,68 @@
 import serial
 import mysql.connector
-from mysql.connector import pooling
-from datetime import date
+from datetime import datetime
+import tkinter as tk
 
-# Replace 'COM3' with the correct serial port of your Arduino
-ser = serial.Serial('COM4', 9600)
+# Connect to MySQL
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="mysqldatabase",
+    database="students_db"
+)
+#create a cursor object
+cursor = db.cursor()
 
-# Initialize MySQL connection pool
-dbconfig = {
-    "host": "localhost",
-    "user": "root",
-    "password": "mysqldatabase",
-    "database": "students_db",
-    "pool_size": 5,
-    "pool_name": "attendance_pool"
-}
-conn_pool = pooling.MySQLConnectionPool(**dbconfig)
+# Open the serial port
+ser = serial.Serial('COM4', 9600)  # Change 'COM4' to the appropriate port
 
-# Read NFC tag data from Arduino via serial communication
-def read_nfc_tag():
+# Function to mark attendance
+def mark_attendance():
+    # Read NFC tag data from the serial port
     tag_data = ser.readline().decode().strip()
-    return tag_data
+    
+    if tag_data.startswith("URK23CS"):  # Assuming tag data starts with "URK23CS"
+        cursor.execute("SELECT * FROM students WHERE student_id = %s", (tag_data,))
+        result = cursor.fetchone()
 
-# Read NFC tag data, retrieve student info, and mark attendance
-def process_nfc_tag():
-    try:
-        uid = read_nfc_tag()
-        if uid:
-            conn = conn_pool.get_connection()
-            cursor = conn.cursor(dictionary=True)
-            query = "SELECT student_id, student_name, student_email FROM students WHERE uid = %s"
-            cursor.execute(query, (uid,))
-            student_data = cursor.fetchone()
-            cursor.close()
-            if student_data:
-                student_id, student_name, student_email = student_data.values()
-                print(f"Student: {student_name} (ID: {student_id}, Email: {student_email})")
-                cursor = conn.cursor()
-                insert_query = "INSERT INTO attendance (student_id, session_date) VALUES (%s, %s)"
-                cursor.execute(insert_query, (student_id, date.today()))
-                conn.commit()
-                cursor.close()
-            else:
-                print("Student not registered.")
-            conn.close()
-    except Exception as e:
-        print(f"Error processing NFC tag: {e}")
+        if result:
+            now = datetime.now().strftime("%H:%M:%S")  # Get current time
+            cursor.execute("INSERT INTO attendance (student_id, date, time) VALUES (%s, NOW(), %s)", (tag_data, now))
+            db.commit()
+            status_label.config(text=f"Attendance marked for student {tag_data} at {now}")
+        else:
+            status_label.config(text=f"Student with ID {tag_data} not found in the database")
 
-# Main process
-while True:
-    process_nfc_tag()
+# Function to empty the attendance database
+def clear_attendance():
+    cursor.execute("TRUNCATE TABLE attendance;")
+    status_label.config(text="Attendance cleared!")
+
+# main window
+window = tk.Tk()
+window.title("Student Attendance System")
+window.geometry("400x200")
+
+# status label
+status_label = tk.Label(window, text="Waiting for NFC tag data...", padx=10, pady=10)
+status_label.pack()
+
+# button to mark attendance
+attendance_button = tk.Button(window, text="Mark Attendance", command=mark_attendance)
+attendance_button.pack(pady=10)
+
+# button to clear the attendance table
+clear_attendance_button = tk.Button(window, text="Clear Attendance Data", command=clear_attendance)
+clear_attendance_button.pack(pady=20)
+
+
+# Close the serial port when the window is closed
+def on_closing():
+    ser.close()
+    db.close()
+    window.destroy()
+
+window.protocol("WM_DELETE_WINDOW", on_closing)
+
+# Start the Tkinter event loop
+window.mainloop()

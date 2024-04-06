@@ -1,41 +1,39 @@
 import mysql.connector
 
-# Connect to MySQL server
-conn = mysql.connector.connect(
-    host='localhost',
-    user='root',
-    password='mysqldatabase'
+#MySQL server
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="mysqldatabase"
 )
-cursor = conn.cursor()
 
-# Create the database if it doesn't exist
+#Create a cursor
+cursor = db.cursor()
+
+#Create students_db database
 cursor.execute("CREATE DATABASE IF NOT EXISTS students_db")
-conn.commit()
-
-# Switch to the database
 cursor.execute("USE students_db")
 
-# Create students table
+# Create a table for students
 cursor.execute("""
-    CREATE TABLE IF NOT EXISTS students (
-        student_id CHAR(20) PRIMARY KEY,
-        student_name VARCHAR(255) NOT NULL,
-        student_email VARCHAR(255) NOT NULL,
-        uid CHAR(20) NOT NULL
-    )
+CREATE TABLE IF NOT EXISTS students (
+    student_id VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL
+)
+""")
+# Create a table for attendance
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(10) NOT NULL,
+    date DATE NOT NULL,
+    time TIME,
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+)
 """)
 
-# Create attendance table
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS attendance (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id CHAR(20),
-        session_date DATE NOT NULL,
-        FOREIGN KEY (student_id) REFERENCES students(student_id)
-    )
-""")
+#commit the changes and close the database connection
+db.commit()
+db.close()
 
-# Commit changes and close connection
-conn.commit()
-cursor.close()
-conn.close()
